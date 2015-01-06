@@ -40,6 +40,7 @@ Ext.define('CustomApp', {
     processedDefects: 0,
 
     fieldFetched: "c_ARTKanban",
+    fieldName: "",
 
     //Get the allowed values for the field into a map into the right order
     _populateStateMap: function(app){
@@ -49,6 +50,7 @@ Ext.define('CustomApp', {
             success: function (models) {
                 var usModel = models.UserStory;
                 var field = usModel.getField(app.fieldFetched);
+                app.fieldName = field.displayName;
                 var valueStore = field.getAllowedValueStore();
                 valueStore.load({
                     callback: function(records, operation, success) {
@@ -221,7 +223,7 @@ Ext.define('CustomApp', {
                 series: [
                     
                         {
-                            name: 'Story State',
+                            name: app.fieldName + ' State',
                             data: app._getNumbers(app)
                         }
 

@@ -39,9 +39,38 @@ Ext.define('CustomApp', {
     totalDefects: 0,
     processedDefects: 0,
 
-    fieldFetched: "ScheduleState",
+    fieldFetched: "c_ARTKanban",
 
-    runQuery: function(){
+    //Get the allowed values for the field into a map into the right order
+    _populateStateMap: function(app){
+
+        Rally.data.ModelFactory.getModels({
+            types: ['UserStory'],
+            success: function (models) {
+                var usModel = models.UserStory;
+                var field = usModel.getField(app.fieldFetched);
+                var valueStore = field.getAllowedValueStore();
+                valueStore.load({
+                    callback: function(records, operation, success) {
+                        if (success) {
+                            app.storyStats = new Map();
+                            Ext.Array.each(records, function(allowedValue){
+                                var sv = allowedValue.get('StringValue');
+                                if (sv === "") sv = "None";
+                                app.storyStats.set(sv,0);
+                            });
+                        }
+                    }
+                });
+            },
+            failure: function() {
+                console.log("Failure to retrieve allowed values of field: " + app.fieldFetched);
+            }
+        });
+
+    },
+
+    _runQuery: function(){
 
         var app = this;
 
@@ -50,7 +79,13 @@ Ext.define('CustomApp', {
         app.unparentedDefects = 0;
         app.totalDefects = 0;
 
-        app.storyStats.clear();
+
+        //Reset the stats values
+        if (app.storyStats){
+            app.storyStats.forEach( function(value,key,map) {
+                app.storyStats.set(key,0);
+            });
+        }
 
         //Get all the defects created during this period using the WSAPI
 
@@ -186,6 +221,7 @@ Ext.define('CustomApp', {
                 series: [
                     
                         {
+                            name: 'Story State',
                             data: app._getNumbers(app)
                         }
 
@@ -263,13 +299,15 @@ Ext.define('CustomApp', {
 
     launch: function() {
 
-        this.storyStats = new Map();    //Somewhere to save stats for the graph
+
+        //Populate stats map with the options for the selected field
+        this._populateStateMap(this);
 
         //Add an action to the button
         this.down('rallybutton').on({
-            click: this.runQuery,
+            click: this._runQuery,
             scope: this
         });
-        this.runQuery();
+        this._runQuery();
     }
 });

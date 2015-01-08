@@ -48,8 +48,10 @@
     totalDefects: 0,
     processedDefects: 0,
 
-    fieldFetched: "c_ARTKanban",
+    fieldFetched: "ScheduleState",
     fieldName: "",
+
+
 
     //Get the allowed values for the field into a map into the right order
     _populateStateMap: function(app){
@@ -121,18 +123,35 @@
         defectStore.load().then({
             success: function(records) {
 
+                if ( records.length > 0){
 
-                _.each(records, function(record) {
-                    if (record.data.Requirement) {
+                    _.each(records, function(record) {
+                        if (record.data.Requirement) {
 
 
-                        //Then call the LBAPI per US to find the state when the defect was created
-                        //Because we have a different timestamp for each defect, we cannot fetch in bulk only individually.
-                        app.addStoryStats(record.data.Requirement, record.data.CreationDate);
-                    } else {
-                        app.unparentedDefects += 1;
+                            //Then call the LBAPI per US to find the state when the defect was created
+                            //Because we have a different timestamp for each defect, we cannot fetch in bulk only individually.
+                            app.addStoryStats(record.data.Requirement, record.data.CreationDate);
+                        } else {
+                            app.unparentedDefects += 1;
+                        }
+                
+                    });
+
+                    if (app.down('text')) {
+                        app.down('text').destroy();
                     }
-                });
+
+                    app.add( {
+                        xtype: 'text',
+                        text: "Total Defects: " + records.length + "\nUnparented Defects: " + app.unparentedDefects,
+                        margin: 10
+                    });
+                }
+                else {
+                    var contxt = app.getContext();
+                    Rally.ui.notify.Notifier.show({message: 'No defects found in ' + contxt.getProject() + '\nTry a different project or date settings'});
+                }
 
             },
             failure: function(error) {
@@ -219,11 +238,6 @@
         if (app.down('rallychart')) {
             app.down('rallychart').destroy();
         }
-
-        if (app.down('text')) {
-            app.down('text').destroy();
-        }
-
         app.add( {
             xtype: 'rallychart',
             chartData:
@@ -242,11 +256,6 @@
             chartColors: [ Rally.util.Colors.cyan ],
             loadMask: false
 
-        });
-        app.add( {
-            xtype: 'text',
-            text: "Unparented Defects: " + app.unparentedDefects,
-            margin: 10
         });
 
     },
@@ -319,6 +328,7 @@
             click: this._runQuery,
             scope: this
         });
+
         this._runQuery();
     }
 });
